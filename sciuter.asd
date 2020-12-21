@@ -8,5 +8,7 @@
   :serial t
   :depends-on (trivial-gamekit)
   :components ((:file "package")
-               (:file "sciuter")
-	       (:file "color")))
+	       (:file "color")
+	       (:file "entity")
+	       (:file "components")
+               (:file "sciuter")))

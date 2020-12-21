@@ -8,117 +8,6 @@
 (defparameter *width* 1024)
 (defparameter *height* 800)
 
-(let ((entity-id- 0))
-  (defun gen-entity-id ()
-    (incf entity-id- 1)))
-
-;; hash table of all components associated to an entity
-;; also keep track of live entities (hash-map-keys)
-(defvar *entities* (make-hash-table :size 1024))
-
-(defvar *inactive-entities* nil)
-
-(defvar *components* (make-hash-table :size 1024))
-
-;; for each component type (identified by a keyword) keep a registry of
-;; entities associated to it and the component data
-;; (i.e components => component type => entities => entity => data)
-;; also associate a component to an entity; for each entity there is a
-;; hash map of component-type => component data
-(defun attach-component (entity component)
-  (let* ((component-type (type-of component))
-         (entity-slot (gethash entity *entities*)))
-    (setf (gethash component-type entity-slot) component)
-    (multiple-value-bind (component-slot present)
-        (gethash component-type *components* (make-hash-table :size 256))
-      (setf (gethash entity component-slot) component)
-      (when (not present)
-        (setf (gethash component-type *components*) component-slot)))))
-
-;; remove the entity from the component registry and the component
-;; from the entity registry
-(defun detach-component (entity component)
-  (let* ((component-type (type-of component))
-         (component-slot (gethash component-type *components*))
-         (entity-slot (gethash entity *entities*)))
-    (when component-slot (remhash entity component-slot))
-    (when entity-slot (remhash component-type entity-slot))))
-
-;; given a component type return all entities with that component
-;; attached attached to them
-(defun entities-with-component (component-type)
-  (alexandria:if-let ((component-slot (gethash component-type *components*)))
-    (alexandria:hash-table-keys component-slot)
-    '()))
-
-;; given a component type return all components
-;; attached attached to some entities
-(defun data-for-component (component-type)
-  (alexandria:if-let ((component-slot (gethash component-type *components*)))
-    (alexandria:hash-table-values component-slot)
-    '()))
-
-(defun components-of-entity (entity)
-  (alexandria:hash-table-values (gethash entity *entities*)))
-
-(defun get-component (entity component-type)
-  (gethash component-type (gethash entity *entities*)))
-
-;; example components
-
-(defclass point ()
-  ((pos :initarg :pos
-        :initform (gamekit:vec2 0.0 0.0)
-        :accessor pos)))
-
-(defclass linear-velocity ()
-  ((dir           :initarg :dir
-                  :initform (gamekit:vec2 0.0 0.0)
-                  :accessor dir)
-   (linear-speed  :initarg :linear-speed
-                  :initform 0.0
-                  :accessor linear-speed)
-   ))
-
-(defmethod step-velocity ((v linear-velocity) dt)
-  (gamekit:mult (dir v) (* (linear-speed v) dt)))
-
-(defclass rolling-timer ()
-  ((seconds :initarg :seconds
-            :initform 0.0
-            :accessor seconds)
-   (counter :initform 0.0
-            :accessor counter)))
-
-(defmethod reset-timer ((timer rolling-timer))
-  (with-slots (seconds counter) timer
-    (setf counter seconds)))
-
-(defmethod update-timer ((timer rolling-timer) dt)
-  (decf (counter timer) dt))
-
-(defmethod expired-timer? ((timer rolling-timer))
-  (<= (counter timer) 0))
-
-(defun update-timers (dt)
-  (loop for timer in (data-for-component 'rolling-timer)
-        do (update-timer timer dt)))
-
-(defclass boundary ()
-  ((limits :initarg  :limits
-           :initform '(0 0 0 0)
-           :accessor limits)))
-
-(defparameter *screen-boundaries*
-  (make-instance 'boundary :limits '(0 0 1024.0 800.0)))
-
-(defmethod inside-boundaries? (pos (boundaries boundary))
-  (destructuring-bind (top left bottom right) (limits boundaries)
-    (let ((x (x pos))
-	  (y (y pos)))
-      (and (>= x left) (<= x right)
-                 (>= y top)  (<= y bottom)))))
-
 (gamekit:defgame the-game () ()
                  (:viewport-width *width*)
                  (:viewport-height *height*)
@@ -136,23 +25,6 @@
                                (:y . :fire)))
 
 (defvar *action-bag* nil)
-
-(defun spawn-entity (&optional id)
-  (let ((eid (or id
-                 (pop *inactive-entities*)
-                 (gen-entity-id))))
-    (setf (gethash eid *entities*) (make-hash-table :size 16))
-    eid))
-
-(defun retire-entity (e)
-  (loop for component being the hash-values of (gethash e *entities*)
-        do (detach-component e component))
-  (push e *inactive-entities*)
-  (remhash e *entities*))
-
-(defun drain-unused-entities (entities)
-  (loop for entity being the hash-keys of entities
-        do (retire-entity entity)))
 
 (defun spawn-bullet (x y dir speed)
   (let ((e (spawn-entity))
@@ -176,7 +48,7 @@
 
 (defun reset-game ()
   (setf *action-bag* nil)
-  (drain-unused-entities *entities*)
+  (drain-unused-entities)
   (spawn-player 400 400))
 
 (defun bind-key-action (key action)
