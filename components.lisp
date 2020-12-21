@@ -61,3 +61,17 @@
 	  (y (y pos)))
       (and (>= x left) (<= x right)
                  (>= y top)  (<= y bottom)))))
+
+(defclass drawing-parameters ()
+  ((radius       :initarg  :radius
+	         :initform 5.0
+	         :accessor radius)
+   (fill-paint   :initarg  :fill-paint
+	         :initform *red*
+	         :accessor fill-paint)
+   (stroke-paint :initarg  :stroke-paint
+		 :initform *blue*
+		 :accessor stroke-paint)
+   (thikness     :initarg  :thikness
+		 :initform 2.0
+		 :accessor thikness)))

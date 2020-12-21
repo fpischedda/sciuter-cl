@@ -26,6 +26,9 @@
 
 (defvar *action-bag* nil)
 
+(defparameter *bullet-draw-parameters*
+  (make-instance 'drawing-parameters :fill-paint *yellow*))
+
 (defun spawn-bullet (x y dir speed)
   (let ((e (spawn-entity))
         (v (make-instance 'linear-velocity :dir dir
@@ -33,7 +36,8 @@
         (p (make-instance 'point :pos (vec2 x y))))
     (attach-component e p)
     (attach-component e v)
-    (attach-component e *screen-boundaries*)))
+    (attach-component e *screen-boundaries*)
+    (attach-component e *bullet-draw-parameters*)))
 
 (defun spawn-player (x y)
   (let ((e (spawn-entity :player))
@@ -44,6 +48,7 @@
         (timer-component (make-instance 'rolling-timer :seconds 0.32)))
     (attach-component e p)
     (attach-component e v)
+    (attach-component e (make-instance 'drawing-parameters :radius 20.0))
     (attach-component shot-timer timer-component)))
 
 (defun reset-game ()
@@ -83,9 +88,21 @@
                        :fill-paint (vec4 0 0 0 0)
                        :thickness 2))
 
+(defmethod draw-parametrized (position (dp drawing-parameters))
+  (with-slots (radius fill-paint stroke-paint thikness) dp
+    (gamekit:draw-circle position
+			 radius
+			 :fill-paint fill-paint
+			 :stroke-paint stroke-paint
+			 :thickness thikness)))
+
 (defun draw-entities ()
-  (loop for position in (data-for-component 'point)
-        do (draw (pos position))))
+  (loop for entity in (entities-with-component 'point)
+        do (let ((position (pos (get-component entity 'point)))
+		 (dp (get-component entity 'drawing-parameters)))
+	     (if dp
+		 (draw-parametrized position dp)
+		 (draw position)))))
 
 (defmethod gamekit:draw ((this the-game))
   (draw-warning)
