@@ -75,3 +75,31 @@
    (thikness     :initarg  :thikness
 		 :initform 2.0
 		 :accessor thikness)))
+
+(defclass bounding-circle ()
+  ((radius :initarg  :radius
+	   :initform 5.0
+	   :accessor radius)))
+
+(defun vec-length (v)
+  (let ((vx (x v))
+	(vy (y v)))
+    (sqrt (+ (* vx vx) (* vy vy)))))
+
+(defun circle-overlap (a-pos a-radius b-pos b-radius)
+  (<= (vec-length (subt b-pos a-pos)) (+ a-radius b-radius)))
+
+(defclass damage ()
+  ((amount :initarg  :amount
+	   :initform 1
+	   :accessor amount)))
+
+(defclass health-points ()
+  ((amount :initarg  :amount
+	   :initform 1
+	   :accessor amount)))
+
+(defclass collision-mask ()
+  ((bits :initarg  :bits
+	 :initform 0
+	 :accessor bits)))

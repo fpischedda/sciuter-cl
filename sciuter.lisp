@@ -2,6 +2,9 @@
 ;; Trying again to make a shmup, this time with common lisp
 ;; and trivial-gamekit:
 ;; https://borodust.org/projects/trivial-gamekit/
+;;
+;; this file contains the implementation of logic and rendering of the game
+;; built on top of entity.lisp, components.lisp and (eventually) system.lisp
 
 (in-package #:sciuter)
 
@@ -22,13 +25,29 @@
                                (:w . :up)
                                (:s . :down)
                                (:z . :fire)
-                               (:y . :fire)))
+                               (:y . :fire)
+			       (:q . :quit)))
 
 (defvar *action-bag* nil)
 
-(defparameter *bullet-draw-parameters*
-  (make-instance 'drawing-parameters :fill-paint *yellow*))
+(defun bind-key-action (key action)
+  (gamekit:bind-button key :pressed
+                       (lambda ()
+                         (push action *action-bag*)))
+  (gamekit:bind-button key :released
+                       (lambda ()
+                         (alexandria:deletef *action-bag* action))))
 
+(defparameter *bullet-draw-parameters*
+  (make-instance 'drawing-parameters
+		 :fill-paint *yellow*
+		 :radius 5.0))
+
+(defparameter *bullet-damage* (make-instance 'damage :amount 10))
+(defparameter *bullet-collision-mask* (make-instance 'collision-mask
+						     :bits #b0001))
+(defparameter *bullet-bounding-circle* (make-instance 'bounding-circle
+						      :radius 5.0))
 (defun spawn-bullet (x y dir speed)
   (let ((e (spawn-entity))
         (v (make-instance 'linear-velocity :dir dir
@@ -37,7 +56,30 @@
     (attach-component e p)
     (attach-component e v)
     (attach-component e *screen-boundaries*)
-    (attach-component e *bullet-draw-parameters*)))
+    (attach-component e *bullet-draw-parameters*)
+    (attach-component e *bullet-bounding-circle*)
+    (attach-component e *bullet-damage*)
+    (attach-component e *bullet-collision-mask*)))
+
+(defparameter *enemy-draw-parameters*
+  (make-instance 'drawing-parameters
+		 :radius 60.0
+		 :fill-paint *green*
+		 :stroke-paint *yellow*))
+
+(defparameter *enemy-collision-mask* (make-instance 'collision-mask
+						    :bits #b0001))
+
+(defun spawn-enemy (x y)
+  (let ((e (spawn-entity :enemy))
+        (p (make-instance 'point :pos (vec2 x y)))
+	(c (make-instance 'bounding-circle :radius 60.0))
+	(hp (make-instance 'health-points :amount 10)))
+    (attach-component e p)
+    (attach-component e *enemy-draw-parameters*)
+    (attach-component e c)
+    (attach-component e hp)
+    (attach-component e *enemy-collision-mask*)))
 
 (defun spawn-player (x y)
   (let ((e (spawn-entity :player))
@@ -54,15 +96,8 @@
 (defun reset-game ()
   (setf *action-bag* nil)
   (drain-unused-entities)
-  (spawn-player 400 400))
-
-(defun bind-key-action (key action)
-  (gamekit:bind-button key :pressed
-                       (lambda ()
-                         (push action *action-bag*)))
-  (gamekit:bind-button key :released
-                       (lambda ()
-                         (alexandria:deletef *action-bag* action))))
+  (spawn-player 400 400)
+  (spawn-enemy  500 600))
 
 (defmethod gamekit:post-initialize ((app the-game))
   (loop for binding in *key-action-binding*
@@ -146,22 +181,43 @@
   (let ((pos (pos (get-component :player 'point)))
         (timer (get-component :player-shot-timer 'rolling-timer)))
     (when (and
-           (action-active? :fire)
-           timer
-           (expired-timer? timer))
+	   (action-active? :fire)
+	   timer
+	   (expired-timer? timer))
       (spawn-bullet (x pos) (y pos) (vec2 0 1) 50)
       (reset-timer timer))))
 
 (defun remove-out-of-boundaries ()
   "Remove all entities that have a 'boundary component and are
-   outside of that boundariy limits."
+   outside of that boundary limits."
   (loop for entity in (entities-with-component 'boundary)
 	do (let ((position (pos (get-component entity 'point)))
 		 (boundary (get-component entity 'boundary)))
 	     (when (not (inside-boundaries? position boundary))
 	       (retire-entity entity)))))
 
-(defparameter *frame-ms* 0.16) ;; more or less 60FPS
+(defun resolve-collisions ()
+  (loop for bullet in (entities-with-component 'damage)
+	do (let ((bullet-pos (pos (get-component bullet 'point)))
+		 (bullet-mask (bits (get-component bullet 'collision-mask)))
+		 (bullet-radius (radius (get-component bullet 'bounding-circle))))
+	     (loop named inner
+		   for target in (entities-with-component 'health-points)
+		   do (let ((target-pos
+			      (pos (get-component target 'point)))
+			    (target-mask
+			      (bits (get-component target 'collision-mask)))
+			    (target-radius
+			      (radius (get-component target 'bounding-circle))))
+			(when (and
+			       (not (= 0
+				       (logand bullet-mask target-mask)))
+			       (circle-overlap bullet-pos bullet-radius
+					       target-pos target-radius))
+			  (retire-entity bullet)
+			  (return-from inner)))))))
+
+(defparameter *frame-ms* 0.16) ;; ~60FPS
 
 (defmethod gamekit:act ((this the-game))
   (update-timers *frame-ms*)
@@ -169,6 +225,9 @@
   (update-positions *frame-ms*)
   (player-shot)
   (remove-out-of-boundaries)
+  (resolve-collisions)
+  (when (action-active? :quit)
+    (stop))
   )
 
 (defun run ()
