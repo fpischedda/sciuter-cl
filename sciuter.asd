@@ -10,5 +10,6 @@
   :components ((:file "package")
 	       (:file "color")
 	       (:file "entity")
+	       (:file "drawables")
 	       (:file "components")
                (:file "sciuter")))

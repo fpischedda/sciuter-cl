@@ -38,10 +38,12 @@
                        (lambda ()
                          (alexandria:deletef *action-bag* action))))
 
-(defparameter *bullet-draw-parameters*
-  (make-instance 'drawing-parameters
-		 :fill-paint *yellow*
-		 :radius 5.0))
+(defparameter *bullet-drawable-component*
+  (make-instance 'drawable
+		 :parameters
+		 (make-instance 'circle-drawing-parameters
+				:fill-paint *yellow*
+				:radius 5.0)))
 
 (defparameter *bullet-damage* (make-instance 'damage :amount 10))
 (defparameter *bullet-collision-mask* (make-instance 'collision-mask
@@ -56,16 +58,18 @@
     (attach-component e p)
     (attach-component e v)
     (attach-component e *screen-boundaries*)
-    (attach-component e *bullet-draw-parameters*)
+    (attach-component e *bullet-drawable-component*)
     (attach-component e *bullet-bounding-circle*)
     (attach-component e *bullet-damage*)
     (attach-component e *bullet-collision-mask*)))
 
-(defparameter *enemy-draw-parameters*
-  (make-instance 'drawing-parameters
-		 :radius 60.0
-		 :fill-paint *green*
-		 :stroke-paint *yellow*))
+(defparameter *enemy-drawable-component*
+  (make-instance 'drawable
+		 :parameters
+		 (make-instance 'circle-drawing-parameters
+				:radius 60.0
+				:fill-paint *green*
+				:stroke-paint *yellow*)))
 
 (defparameter *enemy-collision-mask* (make-instance 'collision-mask
 						    :bits #b0001))
@@ -76,7 +80,7 @@
 	(c (make-instance 'bounding-circle :radius 60.0))
 	(hp (make-instance 'health-points :amount 10)))
     (attach-component e p)
-    (attach-component e *enemy-draw-parameters*)
+    (attach-component e *enemy-drawable-component*)
     (attach-component e c)
     (attach-component e hp)
     (attach-component e *enemy-collision-mask*)))
@@ -87,10 +91,14 @@
                                            :linear-speed 50.0))
         (p (make-instance 'point :pos (vec2 x y)))
         (shot-timer (spawn-entity :player-shot-timer))
-        (timer-component (make-instance 'rolling-timer :seconds 0.32)))
+        (timer-component (make-instance 'rolling-timer :seconds 0.32))
+	(drawable (make-instance 'drawable
+				 :parameters
+				 (make-instance 'circle-drawing-parameters
+						:radius 20.0))))
     (attach-component e p)
     (attach-component e v)
-    (attach-component e (make-instance 'drawing-parameters :radius 20.0))
+    (attach-component e drawable)
     (attach-component shot-timer timer-component)))
 
 (defun reset-game ()
@@ -115,29 +123,11 @@
                                     ,*orange*
                                     ,*yellow*)))))
 
-(defmethod draw (position)
-  (gamekit:draw-circle position
-                       20
-                       :fill-paint *blue*
-                       :stroke-paint *black*
-                       :fill-paint (vec4 0 0 0 0)
-                       :thickness 2))
-
-(defmethod draw-parametrized (position (dp drawing-parameters))
-  (with-slots (radius fill-paint stroke-paint thikness) dp
-    (gamekit:draw-circle position
-			 radius
-			 :fill-paint fill-paint
-			 :stroke-paint stroke-paint
-			 :thickness thikness)))
-
 (defun draw-entities ()
-  (loop for entity in (entities-with-component 'point)
+  (loop for entity in (entities-with-component 'drawable)
         do (let ((position (pos (get-component entity 'point)))
-		 (dp (get-component entity 'drawing-parameters)))
-	     (if dp
-		 (draw-parametrized position dp)
-		 (draw position)))))
+		 (dp (parameters (get-component entity 'drawable))))
+	     (render position dp))))
 
 (defmethod gamekit:draw ((this the-game))
   (draw-warning)
