@@ -94,8 +94,9 @@
         (timer-component (make-instance 'rolling-timer :seconds 0.32))
 	(drawable (make-instance 'drawable
 				 :parameters
-				 (make-instance 'circle-drawing-parameters
-						:radius 20.0))))
+				 (make-instance 'rect-drawing-parameters
+						:width  15.0
+						:height 15.0))))
     (attach-component e p)
     (attach-component e v)
     (attach-component e drawable)
