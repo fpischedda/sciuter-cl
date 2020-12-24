@@ -220,11 +220,15 @@
   (remove-out-of-boundaries)
   (resolve-collisions)
   (when (action-active? :quit)
-    (stop))
-  )
+    (stop)))
 
 (defun run ()
-  (gamekit:start 'the-game))
+  (gamekit:start 'the-game)
+  (gamekit:bind-any-gamepad
+   (lambda (gamepad state)
+     (if (eq :connected state)
+	 (format t "gamepad connected ~a" gamepad)
+	 (format t "gamepad disconnected ~a" gamepad)))))
 
 (defun stop ()
   (gamekit:stop))
