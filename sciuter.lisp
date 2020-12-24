@@ -175,7 +175,9 @@
 	   (action-active? :fire)
 	   timer
 	   (expired-timer? timer))
+      (spawn-bullet (x pos) (y pos) (normalize (vec2 -0.3 1)) 50)
       (spawn-bullet (x pos) (y pos) (vec2 0 1) 50)
+      (spawn-bullet (x pos) (y pos) (normalize (vec2 0.3 1)) 50)
       (reset-timer timer))))
 
 (defun remove-out-of-boundaries ()
