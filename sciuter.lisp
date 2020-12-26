@@ -102,9 +102,20 @@
     (attach-component e drawable)
     (attach-component shot-timer timer-component)))
 
+(let ((score 0))
+  (defun reset-score ()
+    (setf score 0))
+
+  (defun inc-score (amount)
+    (incf score amount))
+
+  (defun get-score ()
+    score))
+
 (defun reset-game ()
   (setf *action-bag* nil)
   (drain-unused-entities)
+  (reset-score)
   (spawn-player 400 400)
   (spawn-enemy  500 600))
 
@@ -114,15 +125,14 @@
                                (bind-key-action key action)))
   (reset-game))
 
-(defun draw-warning ()
-  (dotimes (i 4)
-    (draw-text "W A R N I N G !!!"
-               (vec2 (* *width* .35)
-                     (- (* *height* .75) (* i 24)))
-               :fill-color (nth i `(,*black*
-                                    ,*red*
-                                    ,*orange*
-                                    ,*yellow*)))))
+(defun draw-score ()
+  (let ((score-str (format nil "SCORE: ~a" (get-score))))
+    (draw-text score-str
+	     (vec2 50 50)
+	     :fill-color *black*)
+    (draw-text score-str
+	     (vec2 51 51)
+	     :fill-color *red*)))
 
 (defun draw-entities ()
   (loop for entity in (entities-with-component 'drawable)
@@ -131,9 +141,8 @@
 	     (render position dp))))
 
 (defmethod gamekit:draw ((this the-game))
-  (draw-warning)
   (draw-entities)
-  )
+  (draw-score))
 
 (defun calculate-new-position (position velocity dt)
   (add position (step-velocity velocity dt)))
@@ -207,6 +216,7 @@
 				       (logand bullet-mask target-mask)))
 			       (circle-overlap bullet-pos bullet-radius
 					       target-pos target-radius))
+			  (inc-score 100)
 			  (retire-entity bullet)
 			  (return-from inner)))))))
 
