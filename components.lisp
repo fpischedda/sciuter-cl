@@ -97,3 +97,100 @@
   ((bits :initarg  :bits
 	 :initform 0
 	 :accessor bits)))
+
+(defclass path-node ()
+  ((pos       :initarg  :pos
+	      :initform (vec2 0 0)
+	      :reader   pos)
+   (timestamp :initarg  :timestamp
+	      :initform 0
+	      :reader   timestamp)))
+
+(defclass linear-path ()
+  ((path-nodes   :initarg  :path-nodes
+                 :initform (make-array 0 :element-type 'path-node)
+                 :accessor path-nodes)
+   (current-node :initarg  :current-node
+		 :initform 0
+		 :accessor current-node)
+   (next-time    :initarg  :next-time
+		 :initform 1
+		 :accessor next-time)
+   (current-time :initarg  :current-time
+		 :initform 0.0
+		 :accessor current-time)
+   (repeat       :initarg  :repeat
+		 :initform nil
+		 :accessor repeat)))
+
+(defun make-linear-path (nodes &optional (repeat nil))
+  (make-instance 'linear-path
+		 :path-nodes nodes
+		 :repeat repeat
+		 :next-time (timestamp (aref nodes 1))))
+
+(defun reset-path (path)
+  (with-slots (current-node current-time next-time path-nodes) path
+    (setf current-node 0)
+    (setf next-time (timestamp (aref path-nodes 1)))
+    (setf current-time 0)))
+
+(defun lerp-nodes (current-node next-node curr-time)
+  "return the linear interpolation of the two nodes at the
+   specified time; each node has a timestamp attribute and
+   curr-time is excpected to be
+  (timestamp current-node) <= curr-time <= (timestamp next-node)"
+  (let ((curr-node-timestamp (timestamp current-node))
+	(next-node-timestamp (timestamp next-node)))
+    (gamekit:lerp (pos current-node) (pos next-node)
+		  (/ (- curr-time curr-node-timestamp)
+		     (- next-node-timestamp curr-node-timestamp)))))
+
+(defmethod update-path ((path linear-path) dt)
+  (with-slots (path-nodes current-node next-time current-time repeat) path
+    (let ((last-node-index (- (array-dimension path-nodes 0) 1)))
+      (incf current-time dt)
+      (when (> current-time next-time) ;; when its time to move to next node
+	(if (< current-node last-node-index)
+	    ;; and there is a next node, update the current nodex index
+	    ;; and set next-time to the timesptamp of the next node
+	    (progn
+	      (incf current-node 1)
+	      (when (< current-node last-node-index)
+		(setf next-time (timestamp (aref path-nodes (1+ current-node))))))
+	    (when repeat (reset-path path))))
+
+      (if (= current-node last-node-index)
+	  (pos (aref path-nodes current-node))
+	  (lerp-nodes (aref path-nodes current-node)
+		      (aref path-nodes (1+ current-node))
+		      current-time)))))
+
+(defparameter *test-path-nodes*
+  (make-array 5
+	      :element-type 'path-node
+	      :initial-contents
+	      (list
+	       (make-instance 'path-node
+			      :pos (vec2 600 60)
+			      :timestamp 0)
+	       (make-instance 'path-node
+			      :pos (vec2 600 220)
+			      :timestamp 2)
+	       (make-instance 'path-node
+			      :pos (vec2 300 320)
+			      :timestamp 4)
+	       (make-instance 'path-node
+			      :pos (vec2 100 120)
+			      :timestamp 7)
+	       (make-instance 'path-node
+			      :pos (vec2 600 60)
+			      :timestamp 10))))
+
+(defparameter *test-linear-path* (make-linear-path *enemy-path-nodes*))
+
+(quote
+
+(update-path *test-linear-path* 0.5)
+(reset-path *test-linear-path*)
+ )
