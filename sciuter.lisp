@@ -43,13 +43,13 @@
 		 :parameters
 		 (make-instance 'circle-drawing-parameters
 				:fill-paint *yellow*
-				:radius 5.0)))
+				:radius 10.0)))
 
 (defparameter *bullet-damage* (make-instance 'damage :amount 10))
 (defparameter *bullet-collision-mask* (make-instance 'collision-mask
 						     :bits #b0001))
 (defparameter *bullet-bounding-circle* (make-instance 'bounding-circle
-						      :radius 5.0))
+						      :radius 10.0))
 (defun spawn-bullet (x y dir speed)
   (let ((e (spawn-entity))
         (v (make-instance 'linear-velocity :dir dir
@@ -117,10 +117,11 @@
 (defun spawn-player (x y)
   (let ((e (spawn-entity :player))
         (v (make-instance 'linear-velocity :dir (vec2 0.0 0.0)
-                                           :linear-speed 50.0))
+                                           :linear-speed 350.0))
         (p (make-instance 'point :pos (vec2 x y)))
         (shot-timer (spawn-entity :player-shot-timer))
-        (timer-component (make-instance 'rolling-timer :seconds 0.32))
+	;; ~20 shots/ second (at 60FPS)
+        (timer-component (make-instance 'rolling-timer :seconds (/ 3.0 60)))
 	(drawable (make-instance 'drawable
 				 :parameters
 				 (make-instance 'rect-drawing-parameters
@@ -131,6 +132,10 @@
     (attach-component e drawable)
     (attach-component shot-timer timer-component)))
 
+(quote
+  (setf (seconds (get-component :player-shot-timer 'rolling-timer)) (/ 5.0 60))
+  (setf (linear-speed (get-component :player 'linear-velocity)) 350.0)
+ )
 (let ((score 0))
   (defun reset-score ()
     (setf score 0))
@@ -213,9 +218,9 @@
 	   (action-active? :fire)
 	   timer
 	   (expired-timer? timer))
-      (spawn-bullet (x pos) (y pos) (normalize (vec2 -0.3 1)) 50)
-      (spawn-bullet (x pos) (y pos) (vec2 0 1) 50)
-      (spawn-bullet (x pos) (y pos) (normalize (vec2 0.3 1)) 50)
+      (spawn-bullet (x pos) (y pos) (normalize (vec2 -0.3 1)) 450)
+      (spawn-bullet (x pos) (y pos) (vec2 0 1) 450)
+      (spawn-bullet (x pos) (y pos) (normalize (vec2 0.3 1)) 450)
       (reset-timer timer))))
 
 (defun remove-out-of-boundaries ()
