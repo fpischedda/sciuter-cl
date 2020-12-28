@@ -50,7 +50,11 @@
 						     :bits #b0001))
 (defparameter *bullet-bounding-circle* (make-instance 'bounding-circle
 						      :radius 10.0))
-(defun spawn-bullet (x y dir speed)
+(defun spawn-bullet (x y dir speed &optional
+				     (drawable *bullet-drawable-component*)
+				     (damage *bullet-damage*)
+				     (collision-mask *bullet-collision-mask*)
+				     (bounding-circle *bullet-bounding-circle*))
   (let ((e (spawn-entity))
         (v (make-instance 'linear-velocity :dir dir
                                            :linear-speed speed))
@@ -58,10 +62,10 @@
     (attach-component e p)
     (attach-component e v)
     (attach-component e *screen-boundaries*)
-    (attach-component e *bullet-drawable-component*)
-    (attach-component e *bullet-bounding-circle*)
-    (attach-component e *bullet-damage*)
-    (attach-component e *bullet-collision-mask*)))
+    (attach-component e drawable)
+    (attach-component e bounding-circle)
+    (attach-component e damage)
+    (attach-component e collision-mask)))
 
 (defparameter *enemy-drawable-component*
   (make-instance 'drawable
