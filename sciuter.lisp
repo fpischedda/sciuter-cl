@@ -74,6 +74,29 @@
 (defparameter *enemy-collision-mask* (make-instance 'collision-mask
 						    :bits #b0001))
 
+(defparameter *enemy-path-nodes*
+  (make-array 5
+	      :element-type 'path-node
+	      :initial-contents
+	      (list
+	       (make-instance 'path-node
+			      :pos (vec2 400 60)
+			      :timestamp 0)
+	       (make-instance 'path-node
+			      :pos (vec2 900 420)
+			      :timestamp 2)
+	       (make-instance 'path-node
+			      :pos (vec2 500 680)
+			      :timestamp 4)
+	       (make-instance 'path-node
+			      :pos (vec2 100 220)
+			      :timestamp 7)
+	       (make-instance 'path-node
+			      :pos (vec2 400 60)
+			      :timestamp 10))))
+
+(defparameter *enemy-linear-path* (make-linear-path *enemy-path-nodes* t))
+
 (defun spawn-enemy (x y)
   (let ((e (spawn-entity :enemy))
         (p (make-instance 'point :pos (vec2 x y)))
@@ -83,7 +106,13 @@
     (attach-component e *enemy-drawable-component*)
     (attach-component e c)
     (attach-component e hp)
-    (attach-component e *enemy-collision-mask*)))
+    (attach-component e *enemy-collision-mask*)
+    (attach-component e *enemy-linear-path*)))
+
+(quote
+  (detach-component :enemy 'linear-path)
+  (attach-component :enemy *enemy-linear-path*)
+ )
 
 (defun spawn-player (x y)
   (let ((e (spawn-entity :player))
@@ -220,12 +249,19 @@
 			  (retire-entity bullet)
 			  (return-from inner)))))))
 
-(defparameter *frame-ms* 0.16) ;; ~60FPS
+(defun update-entities-with-path (dt)
+  (loop for entity in (entities-with-component 'linear-path)
+	do (let ((lp (get-component entity 'linear-path))
+		 (position (get-component entity 'point)))
+	     (setf (pos position) (update-path lp dt)))))
+
+(defparameter *fixed-dt* (/ 1.0 60.0)) ;; ~60FPS
 
 (defmethod gamekit:act ((this the-game))
-  (update-timers *frame-ms*)
+  (update-timers *fixed-dt*)
   (update-player-direction)
-  (update-positions *frame-ms*)
+  (update-positions *fixed-dt*)
+  (update-entities-with-path *fixed-dt*)
   (player-shot)
   (remove-out-of-boundaries)
   (resolve-collisions)
