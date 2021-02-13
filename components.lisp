@@ -187,10 +187,67 @@
 			      :pos (vec2 600 60)
 			      :timestamp 10))))
 
-(defparameter *test-linear-path* (make-linear-path *enemy-path-nodes*))
+(defparameter *bullet-drawable-component*
+  (make-instance 'drawable
+		 :parameters
+		 (make-instance 'circle-drawing-parameters
+				:fill-paint *yellow*
+				:radius 10.0)))
 
-(quote
+(defparameter *bullet-damage* (make-instance 'damage :amount 10))
+(defparameter *bullet-collision-mask* (make-instance 'collision-mask
+						     :bits #b0001))
+(defparameter *bullet-bounding-circle* (make-instance 'bounding-circle
+						      :radius 10.0))
+(defun spawn-bullet (x y dir speed &optional
+				     (drawable *bullet-drawable-component*)
+				     (damage *bullet-damage*)
+				     (collision-mask *bullet-collision-mask*)
+				     (bounding-circle *bullet-bounding-circle*))
+  (let ((e (spawn-entity))
+        (v (make-instance 'linear-velocity :dir dir
+                                           :linear-speed speed))
+        (p (make-instance 'point :pos (vec2 x y))))
+    (attach-component e p)
+    (attach-component e v)
+    (attach-component e *screen-boundaries*)
+    (attach-component e drawable)
+    (attach-component e bounding-circle)
+    (attach-component e damage)
+    (attach-component e collision-mask)))
 
-(update-path *test-linear-path* 0.5)
-(reset-path *test-linear-path*)
- )
+(defclass enemy-behavior ()
+  ((shoting-timer :initarg  :shoting-timer
+		  :accessor shoting-timer)))
+
+(defun make-enemy-behavior (bullets-second)
+  (let ((timer (make-instance 'rolling-timer :seconds (/ 1.0 bullets-second))))
+    (make-instance 'enemy-behavior :shoting-timer timer)))
+
+(defparameter *enemy-bullet-drawable-component*
+  (make-instance 'drawable
+		 :parameters
+		 (make-instance 'circle-drawing-parameters
+				:fill-paint *red*
+				:stroke-paint *black*
+				:radius 5.0)))
+
+(defparameter *enemy-bullet-damage* (make-instance 'damage :amount 1))
+(defparameter *enemy-bullet-collision-mask* (make-instance 'collision-mask
+							   :bits #b0010))
+(defparameter *enemy-bullet-bounding-circle*
+  (make-instance 'bounding-circle
+		 :radius 5.0))
+
+(defun update-enemy-behavior (enemy behavior dt)
+  (let ((timer (shoting-timer behavior)))
+    (update-timer timer dt)
+    (when (expired-timer? timer)
+      (reset-timer timer)
+      (let ((position (get-component enemy 'point)))
+	(spawn-bullet (x (pos position)) (y (pos position))
+		      (vec2 0 -1) 200
+		      *enemy-bullet-drawable-component*
+		      *enemy-bullet-damage*
+		      *enemy-bullet-collision-mask*
+		      *enemy-bullet-bounding-circle*)))))

@@ -38,35 +38,6 @@
                        (lambda ()
                          (alexandria:deletef *action-bag* action))))
 
-(defparameter *bullet-drawable-component*
-  (make-instance 'drawable
-		 :parameters
-		 (make-instance 'circle-drawing-parameters
-				:fill-paint *yellow*
-				:radius 10.0)))
-
-(defparameter *bullet-damage* (make-instance 'damage :amount 10))
-(defparameter *bullet-collision-mask* (make-instance 'collision-mask
-						     :bits #b0001))
-(defparameter *bullet-bounding-circle* (make-instance 'bounding-circle
-						      :radius 10.0))
-(defun spawn-bullet (x y dir speed &optional
-				     (drawable *bullet-drawable-component*)
-				     (damage *bullet-damage*)
-				     (collision-mask *bullet-collision-mask*)
-				     (bounding-circle *bullet-bounding-circle*))
-  (let ((e (spawn-entity))
-        (v (make-instance 'linear-velocity :dir dir
-                                           :linear-speed speed))
-        (p (make-instance 'point :pos (vec2 x y))))
-    (attach-component e p)
-    (attach-component e v)
-    (attach-component e *screen-boundaries*)
-    (attach-component e drawable)
-    (attach-component e bounding-circle)
-    (attach-component e damage)
-    (attach-component e collision-mask)))
-
 (defparameter *enemy-drawable-component*
   (make-instance 'drawable
 		 :parameters
@@ -101,22 +72,19 @@
 
 (defparameter *enemy-linear-path* (make-linear-path *enemy-path-nodes* t))
 
-(defun spawn-enemy (x y)
-  (let ((e (spawn-entity :enemy))
+(defun spawn-enemy (x y &optional enemy-id (bullets-second 50))
+  (let ((e (spawn-entity enemy-id))
         (p (make-instance 'point :pos (vec2 x y)))
 	(c (make-instance 'bounding-circle :radius 60.0))
-	(hp (make-instance 'health-points :amount 10)))
+	(hp (make-instance 'health-points :amount 10))
+	(eb (make-enemy-behavior bullets-second)))
     (attach-component e p)
     (attach-component e *enemy-drawable-component*)
     (attach-component e c)
     (attach-component e hp)
     (attach-component e *enemy-collision-mask*)
-    (attach-component e *enemy-linear-path*)))
-
-(quote
-  (detach-component :enemy 'linear-path)
-  (attach-component :enemy *enemy-linear-path*)
- )
+    (attach-component e *enemy-linear-path*)
+    (attach-component e eb)))
 
 (defun spawn-player (x y)
   (let ((e (spawn-entity :player))
@@ -136,10 +104,6 @@
     (attach-component e drawable)
     (attach-component shot-timer timer-component)))
 
-(quote
-  (setf (seconds (get-component :player-shot-timer 'rolling-timer)) (/ 5.0 60))
-  (setf (linear-speed (get-component :player 'linear-velocity)) 350.0)
- )
 (let ((score 0))
   (defun reset-score ()
     (setf score 0))
@@ -155,7 +119,9 @@
   (drain-unused-entities)
   (reset-score)
   (spawn-player 400 400)
-  (spawn-enemy  500 600))
+  (spawn-enemy  500 600 :enemy) ;; this one has an explicit id to help debugging
+  (spawn-enemy  500 600)
+  )
 
 (defmethod gamekit:post-initialize ((app the-game))
   (loop for binding in *key-action-binding*
