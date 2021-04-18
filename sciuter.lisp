@@ -49,26 +49,22 @@
 (defparameter *enemy-collision-mask* (make-instance 'collision-mask
 						    :bits #b0001))
 
+(defun make-path-node (pos timestamp)
+  "helper function to create a path-node instance"
+  (make-instance 'path-node
+		 :pos pos
+		 :timestamp timestamp))
+
 (defparameter *enemy-path-nodes*
   (make-array 5
 	      :element-type 'path-node
 	      :initial-contents
 	      (list
-	       (make-instance 'path-node
-			      :pos (vec2 400 60)
-			      :timestamp 0)
-	       (make-instance 'path-node
-			      :pos (vec2 900 420)
-			      :timestamp 2)
-	       (make-instance 'path-node
-			      :pos (vec2 500 680)
-			      :timestamp 4)
-	       (make-instance 'path-node
-			      :pos (vec2 100 220)
-			      :timestamp 7)
-	       (make-instance 'path-node
-			      :pos (vec2 400 60)
-			      :timestamp 10))))
+	       (make-path-node (vec2 400 60) 0)
+	       (make-path-node (vec2 900 420) 2)
+	       (make-path-node (vec2 500 680) 4)
+	       (make-path-node (vec2 100 220) 7)
+	       (make-path-node (vec2 400 60) 10))))
 
 (defparameter *enemy-linear-path* (make-linear-path *enemy-path-nodes* t))
 
