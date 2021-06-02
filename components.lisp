@@ -119,13 +119,17 @@
    (current-time :initarg  :current-time
 		 :initform 0.0
 		 :accessor current-time)
+   (relative-pos :initarg  :relative-pos
+		 :initform (vec2 0 0)
+		 :accessor relative-pos)
    (repeat       :initarg  :repeat
 		 :initform nil
 		 :accessor repeat)))
 
-(defun make-linear-path (nodes &optional (repeat nil))
+(defun make-linear-path (nodes &key (relative-pos nil) (repeat nil))
   (make-instance 'linear-path
 		 :path-nodes nodes
+		 :relative-pos (or relative-pos (vec2 0 0))
 		 :repeat repeat
 		 :next-time (timestamp (aref nodes 1))))
 
@@ -147,12 +151,12 @@
 		     (- next-node-timestamp curr-node-timestamp)))))
 
 (defmethod update-path ((path linear-path) dt)
-  (with-slots (path-nodes current-node next-time current-time repeat) path
+  (with-slots (path-nodes current-node next-time current-time relative-pos repeat) path
     (let ((last-node-index (- (array-dimension path-nodes 0) 1)))
       (incf current-time dt)
       (when (> current-time next-time) ;; when its time to move to next node
 	(if (< current-node last-node-index)
-	    ;; and there is a next node, update the current nodex index
+	    ;; and there is a next node, update the current node index
 	    ;; and set next-time to the timesptamp of the next node
 	    (progn
 	      (incf current-node 1)
@@ -160,11 +164,12 @@
 		(setf next-time (timestamp (aref path-nodes (1+ current-node))))))
 	    (when repeat (reset-path path))))
 
-      (if (= current-node last-node-index)
-	  (pos (aref path-nodes current-node))
-	  (lerp-nodes (aref path-nodes current-node)
-		      (aref path-nodes (1+ current-node))
-		      current-time)))))
+      (gamekit:add relative-pos
+		   (if (= current-node last-node-index)
+		       (pos (aref path-nodes current-node))
+		       (lerp-nodes (aref path-nodes current-node)
+				   (aref path-nodes (1+ current-node))
+				   current-time))))))
 
 (defparameter *test-path-nodes*
   (make-array 5

@@ -66,10 +66,13 @@
 	       (make-path-node (vec2 100 220) 7)
 	       (make-path-node (vec2 400 60) 10))))
 
-(defparameter *enemy-linear-path* (make-linear-path *enemy-path-nodes* t))
+(defun make-enemy-path (relative-pos)
+  (make-linear-path *enemy-path-nodes* :relative-pos relative-pos :repeat t))
 
-(defun spawn-enemy (x y &optional enemy-id (bullets-second 50))
-  (let ((e (spawn-entity enemy-id))
+(defun spawn-enemy (x y &key entity-id relative-pos (bullets-second 50))
+  "create a enemy entity, with all the needed components;
+   return the newly created entity."
+  (let ((e (spawn-entity entity-id))
         (p (make-instance 'point :pos (vec2 x y)))
 	(c (make-instance 'bounding-circle :radius 60.0))
 	(hp (make-instance 'health-points :amount 10))
@@ -79,8 +82,9 @@
     (attach-component e c)
     (attach-component e hp)
     (attach-component e *enemy-collision-mask*)
-    (attach-component e *enemy-linear-path*)
-    (attach-component e eb)))
+    (attach-component e (make-enemy-path relative-pos))
+    (attach-component e eb)
+    e))
 
 (defun spawn-player (x y)
   (let ((e (spawn-entity :player))
@@ -101,8 +105,8 @@
     (attach-component shot-timer timer-component)))
 
 (let ((score 0))
-  (defun reset-score ()
-    (setf score 0))
+  (defun reset-score (&optional (new-score 0))
+    (setf score new-score))
 
   (defun inc-score (amount)
     (incf score amount))
@@ -115,8 +119,8 @@
   (drain-unused-entities)
   (reset-score)
   (spawn-player 400 400)
-  (spawn-enemy  500 600 :enemy) ;; this one has an explicit id to help debugging
-  (spawn-enemy  500 600)
+  (spawn-enemy  500 600 :entity-id :enemy) ;; this one has an explicit id to help debugging
+  (spawn-enemy  200 100 :relative-pos (vec2 200 100))
   )
 
 (defmethod gamekit:post-initialize ((app the-game))
@@ -148,6 +152,8 @@
   (add position (step-velocity velocity dt)))
 
 (defun update-positions (dt)
+  "iterate over entities with linear-velicity component and update their
+   point component accordingly to the provided delta time dt."
   (loop for entity in (entities-with-component 'linear-velocity)
         do (let ((vel      (get-component entity 'linear-velocity))
                  (position (get-component entity 'point)))
@@ -155,6 +161,8 @@
                    (calculate-new-position (pos position) vel dt)))))
 
 (defun action-active? (action)
+  "takes an action symbol (for example :fire) and returns truty if the
+   the action is active."
   (member action *action-bag*))
 
 (defun get-new-control-direction ()
