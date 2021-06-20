@@ -15,13 +15,14 @@
 
 (defvar *components* (make-hash-table :size 1024))
 
-(defun attach-component (entity component)
-  "for each component type (identified by a keyword) keep a registry of
-   entities associated to it and the component data
+(defun attach-component (entity component &optional component-type)
+  "for each component type, identified by component type if specified or
+   (type-of component) keep a registry of entities associated to it and
+   the component data
    (i.e components => component type => entities => entity => data)
    also associate a component to an entity; for each entity there is a
    hash map of component-type => component data."
-  (let* ((component-type (type-of component))
+  (let* ((component-type (or component-type (type-of component)))
          (entity-slot (gethash entity *entities*)))
     (setf (gethash component-type entity-slot) component)
     (multiple-value-bind (component-slot present)
@@ -30,10 +31,10 @@
       (when (not present)
         (setf (gethash component-type *components*) component-slot)))))
 
-(defun detach-component (entity component)
+(defun detach-component (entity component &optional component-type)
   "remove the entity from the component registry and the component
    from the entity registry"
-  (let* ((component-type (type-of component))
+  (let* ((component-type (or component-type (type-of component)))
          (component-slot (gethash component-type *components*))
          (entity-slot (gethash entity *entities*)))
     (when component-slot (remhash entity component-slot))
