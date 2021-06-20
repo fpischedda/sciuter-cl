@@ -212,8 +212,8 @@
   (let ((e (spawn-entity))
         (v (make-instance 'linear-velocity :dir dir
                                            :linear-speed speed))
-        (p (make-instance 'point :pos (vec2 x y))))
-    (attach-component e p)
+        (p (vec2 x y)))
+    (attach-component e p :position)
     (attach-component e v)
     (attach-component e *screen-boundaries*)
     (attach-component e drawable)
@@ -249,8 +249,8 @@
     (update-timer timer dt)
     (when (expired-timer? timer)
       (reset-timer timer)
-      (let ((position (get-component enemy 'point)))
-	(spawn-bullet (x (pos position)) (y (pos position))
+      (let ((position (get-component enemy :position)))
+	(spawn-bullet (x position) (y position)
 		      (vec2 0 -1) 200
 		      *enemy-bullet-drawable-component*
 		      *enemy-bullet-damage*

@@ -73,11 +73,10 @@
   "create a enemy entity, with all the needed components;
    return the newly created entity."
   (let ((e (spawn-entity entity-id))
-        (p (make-instance 'point :pos (vec2 x y)))
 	(c (make-instance 'bounding-circle :radius 60.0))
 	(hp (make-instance 'health-points :amount 10))
 	(eb (make-enemy-behavior bullets-second)))
-    (attach-component e p)
+    (attach-component e (vec2 x y) :position)
     (attach-component e *enemy-drawable-component*)
     (attach-component e c)
     (attach-component e hp)
@@ -90,7 +89,6 @@
   (let ((e (spawn-entity :player))
         (v (make-instance 'linear-velocity :dir (vec2 0.0 0.0)
                                            :linear-speed 350.0))
-        (p (make-instance 'point :pos (vec2 x y)))
         (shot-timer (spawn-entity :player-shot-timer))
 	;; ~20 shots/ second (at 60FPS)
         (timer-component (make-instance 'rolling-timer :seconds (/ 1.0 20)))
@@ -99,7 +97,7 @@
 				 (make-instance 'rect-drawing-parameters
 						:width  15.0
 						:height 15.0))))
-    (attach-component e p)
+    (attach-component e (vec2 x y) :position)
     (attach-component e v)
     (attach-component e drawable)
     (attach-component shot-timer timer-component)))
@@ -140,7 +138,7 @@
 
 (defun draw-entities ()
   (loop for entity in (entities-with-component 'drawable)
-        do (let ((position (pos (get-component entity 'point)))
+        do (let ((position (get-component entity :position))
 		 (dp (parameters (get-component entity 'drawable))))
 	     (render position dp))))
 
@@ -153,12 +151,13 @@
 
 (defun update-positions (dt)
   "iterate over entities with linear-velicity component and update their
-   point component accordingly to the provided delta time dt."
+   position component accordingly to the provided delta time dt."
   (loop for entity in (entities-with-component 'linear-velocity)
         do (let ((vel      (get-component entity 'linear-velocity))
-                 (position (get-component entity 'point)))
-             (setf (pos position)
-                   (calculate-new-position (pos position) vel dt)))))
+                 (position (get-component entity :position)))
+             (attach-component entity
+			    (calculate-new-position position vel dt)
+			    :position))))
 
 (defun action-active? (action)
   "takes an action symbol (for example :fire) and returns truty if the
@@ -186,7 +185,7 @@
   "Short: make the player to shot.
    Long: If the :fire button is pressed and the :player-shot-timer
    has expired spawn a bullet."
-  (let ((pos (pos (get-component :player 'point)))
+  (let ((pos (get-component :player :position))
         (timer (get-component :player-shot-timer 'rolling-timer)))
     (when (and
 	   (action-active? :fire)
@@ -201,20 +200,20 @@
   "Remove all entities that have a 'boundary component and are
    outside of that boundary limits."
   (loop for entity in (entities-with-component 'boundary)
-	do (let ((position (pos (get-component entity 'point)))
+	do (let ((position (get-component entity :position))
 		 (boundary (get-component entity 'boundary)))
 	     (when (not (inside-boundaries? position boundary))
 	       (retire-entity entity)))))
 
 (defun resolve-collisions ()
   (loop for bullet in (entities-with-component 'damage)
-	do (let ((bullet-pos (pos (get-component bullet 'point)))
+	do (let ((bullet-pos (get-component bullet :position))
 		 (bullet-mask (bits (get-component bullet 'collision-mask)))
 		 (bullet-radius (radius (get-component bullet 'bounding-circle))))
 	     (loop named inner
 		   for target in (entities-with-component 'health-points)
 		   do (let ((target-pos
-			      (pos (get-component target 'point)))
+			      (get-component target :position))
 			    (target-mask
 			      (bits (get-component target 'collision-mask)))
 			    (target-radius
@@ -230,9 +229,8 @@
 
 (defun update-entities-with-path (dt)
   (loop for entity in (entities-with-component 'linear-path)
-	do (let ((lp (get-component entity 'linear-path))
-		 (position (get-component entity 'point)))
-	     (setf (pos position) (update-path lp dt)))))
+	do (let ((lp (get-component entity 'linear-path)))
+	     (attach-component entity (update-path lp dt) :position))))
 
 (defparameter *fixed-dt* (/ 1.0 60.0)) ;; ~60FPS
 
