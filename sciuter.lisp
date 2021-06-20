@@ -93,7 +93,7 @@
         (p (make-instance 'point :pos (vec2 x y)))
         (shot-timer (spawn-entity :player-shot-timer))
 	;; ~20 shots/ second (at 60FPS)
-        (timer-component (make-instance 'rolling-timer :seconds (/ 3.0 60)))
+        (timer-component (make-instance 'rolling-timer :seconds (/ 1.0 20)))
 	(drawable (make-instance 'drawable
 				 :parameters
 				 (make-instance 'rect-drawing-parameters
