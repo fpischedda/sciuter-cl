@@ -16,6 +16,8 @@
                  (:viewport-height *height*)
                  (:viewport-title "CL-Sciuter"))
 
+;; setup keyboard input mapping
+;; each mapping is a cons like (:key-keyword . :key-action)
 (defvar *key-action-binding* '((:left . :left)
                                (:right . :right)
                                (:up . :up)
@@ -28,8 +30,13 @@
                                (:y . :fire)
 			       (:q . :quit)))
 
+;; action bag will hold a list of actions currently active
+;; i.e. if the :z key is pressed the :fire action will be in this list
 (defvar *action-bag* nil)
 
+;; therefore :pressed events will add the corresponding action to the
+;; action-bag and :released events will do the opposite, removing the
+;; action from the action-bag
 (defun bind-key-action (key action)
   (gamekit:bind-button key :pressed
                        (lambda ()
@@ -38,13 +45,14 @@
                        (lambda ()
                          (alexandria:deletef *action-bag* action))))
 
+;; here comes the part where entities are defined, with all their
+;; components
+
 (defparameter *enemy-drawable-component*
-  (make-instance 'drawable
-		 :parameters
-		 (make-instance 'circle-drawing-parameters
-				:radius 60.0
-				:fill-paint *green*
-				:stroke-paint *yellow*)))
+  (make-instance 'circle-drawing-parameters
+		 :radius 60.0
+		 :fill-paint *green*
+		 :stroke-paint *yellow*))
 
 (defparameter *enemy-collision-mask* (make-instance 'collision-mask
 						    :bits #b0001))
@@ -77,7 +85,7 @@
 	(hp (make-instance 'health-points :amount 10))
 	(eb (make-enemy-behavior bullets-second)))
     (attach-component e (vec2 x y) :position)
-    (attach-component e *enemy-drawable-component*)
+    (attach-component e *enemy-drawable-component* :drawable)
     (attach-component e c)
     (attach-component e hp)
     (attach-component e *enemy-collision-mask*)
@@ -92,14 +100,12 @@
         (shot-timer (spawn-entity :player-shot-timer))
 	;; ~20 shots/ second (at 60FPS)
         (timer-component (make-instance 'rolling-timer :seconds (/ 1.0 20)))
-	(drawable (make-instance 'drawable
-				 :parameters
-				 (make-instance 'rect-drawing-parameters
-						:width  15.0
-						:height 15.0))))
+	(drawable (make-instance 'rect-drawing-parameters
+				 :width  15.0
+				 :height 15.0)))
     (attach-component e (vec2 x y) :position)
     (attach-component e v)
-    (attach-component e drawable)
+    (attach-component e drawable :drawable)
     (attach-component shot-timer timer-component)))
 
 (let ((score 0))
@@ -137,10 +143,11 @@
 	     :fill-color *red*)))
 
 (defun draw-entities ()
-  (loop for entity in (entities-with-component 'drawable)
-        do (let ((position (get-component entity :position))
-		 (dp (parameters (get-component entity 'drawable))))
-	     (render position dp))))
+  (loop for entity in (entities-with-component :drawable)
+	do (when (alexandria:when-let
+			    ((position (get-component entity :position))
+			     (drawable (get-component entity :drawable)))
+			  (render position drawable)))))
 
 (defmethod gamekit:draw ((this the-game))
   (draw-entities)

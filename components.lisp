@@ -193,11 +193,9 @@
 			      :timestamp 10))))
 
 (defparameter *bullet-drawable-component*
-  (make-instance 'drawable
-		 :parameters
-		 (make-instance 'circle-drawing-parameters
-				:fill-paint *yellow*
-				:radius 10.0)))
+  (make-instance 'circle-drawing-parameters
+		 :fill-paint *yellow*
+		 :radius 10.0))
 
 (defparameter *bullet-damage* (make-instance 'damage :amount 10))
 (defparameter *bullet-collision-mask* (make-instance 'collision-mask
@@ -216,7 +214,7 @@
     (attach-component e p :position)
     (attach-component e v)
     (attach-component e *screen-boundaries*)
-    (attach-component e drawable)
+    (attach-component e drawable :drawable)
     (attach-component e bounding-circle)
     (attach-component e damage)
     (attach-component e collision-mask)))
@@ -230,12 +228,10 @@
     (make-instance 'enemy-behavior :shoting-timer timer)))
 
 (defparameter *enemy-bullet-drawable-component*
-  (make-instance 'drawable
-		 :parameters
-		 (make-instance 'circle-drawing-parameters
-				:fill-paint *red*
-				:stroke-paint *black*
-				:radius 5.0)))
+  (make-instance 'circle-drawing-parameters
+		 :fill-paint *red*
+		 :stroke-paint *black*
+		 :radius 5.0))
 
 (defparameter *enemy-bullet-damage* (make-instance 'damage :amount 1))
 (defparameter *enemy-bullet-collision-mask* (make-instance 'collision-mask
