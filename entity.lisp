@@ -68,8 +68,9 @@
     eid))
 
 (defun retire-entity (e)
-  (loop for component being the hash-values of (gethash e *entities*)
-        do (detach-component e component))
+  (maphash (lambda (type component)
+	     (detach-component e component type))
+	   (gethash e *entities*))
   (push e *inactive-entities*)
   (remhash e *entities*))
 

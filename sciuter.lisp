@@ -8,8 +8,15 @@
 
 (in-package #:sciuter)
 
-(defparameter *width* 1024)
-(defparameter *height* 800)
+(defparameter *width* 512)
+(defparameter *height* 512)
+
+(gamekit:register-resource-package :keyword
+                                   (asdf:system-relative-pathname :sciuter "assets/"))
+
+
+(gamekit:define-image :boss-image "boss.png")
+;; (gamekit:define-sound :snake-grab "snake-grab.ogg")
 
 (gamekit:defgame the-game () ()
                  (:viewport-width *width*)
@@ -38,13 +45,19 @@
                        (lambda ()
                          (alexandria:deletef *action-bag* action))))
 
-(defparameter *enemy-drawable-component*
+(defparameter *enemy-drawable-component-circle*
   (make-instance 'drawable
 		 :parameters
 		 (make-instance 'circle-drawing-parameters
 				:radius 60.0
 				:fill-paint *green*
 				:stroke-paint *yellow*)))
+
+(defparameter *enemy-drawable-component-image*
+  (make-instance 'drawable
+		 :parameters
+		 (make-instance 'image-drawing-parameters
+				:image-id :boss)))
 
 (defparameter *enemy-collision-mask* (make-instance 'collision-mask
 						    :bits #b0001))
@@ -60,28 +73,33 @@
 	      :element-type 'path-node
 	      :initial-contents
 	      (list
-	       (make-path-node (vec2 400 60) 0)
-	       (make-path-node (vec2 900 420) 2)
-	       (make-path-node (vec2 500 680) 4)
-	       (make-path-node (vec2 100 220) 7)
-	       (make-path-node (vec2 400 60) 10))))
+	       (make-path-node (vec2 50 60) 0)
+	       (make-path-node (vec2 500 420) 2)
+	       (make-path-node (vec2 200 180) 4)
+	       (make-path-node (vec2 10 320) 7)
+	       (make-path-node (vec2 50 60) 10))))
 
-(defun make-enemy-path (relative-pos)
-  (make-linear-path *enemy-path-nodes* :relative-pos relative-pos :repeat t))
+(defun make-enemy-path (relative-pos start-time)
+  (make-linear-path *enemy-path-nodes*
+		    :relative-pos relative-pos
+		    :repeat t
+		    :start-time t))
 
-(defun spawn-enemy (x y &key entity-id relative-pos (bullets-second 50))
+(defun spawn-enemy (x y &key entity-id
+			  relative-pos
+			  (drawable *enemy-drawable-component-circle*)
+			  (bullets-second 50)
+			  (start-time 0.0))
   "create a enemy entity, with all the needed components;
    return the newly created entity."
   (let ((e (spawn-entity entity-id))
-	(c (make-instance 'bounding-circle :radius 60.0))
-	(hp (make-instance 'health-points :amount 10))
 	(eb (make-enemy-behavior bullets-second)))
     (attach-component e (vec2 x y) :position)
-    (attach-component e *enemy-drawable-component*)
-    (attach-component e c)
-    (attach-component e hp)
+    (attach-component e drawable)
+    (attach-component e 30.0 :bounding-circle)
+    (attach-component e 10 :healt-points)
     (attach-component e *enemy-collision-mask*)
-    (attach-component e (make-enemy-path relative-pos))
+    (attach-component e (make-enemy-path relative-pos start-time))
     (attach-component e eb)
     e))
 
@@ -118,7 +136,7 @@
   (reset-score)
   (spawn-player 400 400)
   (spawn-enemy  500 600 :entity-id :enemy) ;; this one has an explicit id to help debugging
-  (spawn-enemy  200 100 :relative-pos (vec2 200 100))
+  (spawn-enemy  200 100 :relative-pos (vec2 200 100) :start-time 1.5)
   )
 
 (defmethod gamekit:post-initialize ((app the-game))
@@ -206,19 +224,19 @@
 	       (retire-entity entity)))))
 
 (defun resolve-collisions ()
-  (loop for bullet in (entities-with-component 'damage)
+  (loop for bullet in (entities-with-component :damage)
 	do (let ((bullet-pos (get-component bullet :position))
 		 (bullet-mask (bits (get-component bullet 'collision-mask)))
-		 (bullet-radius (radius (get-component bullet 'bounding-circle))))
+		 (bullet-radius (get-component bullet :bounding-circle)))
 	     (loop named inner
-		   for target in (entities-with-component 'health-points)
+		   for target in (entities-with-component :health-points)
 		   do (let ((target-pos
 			      (get-component target :position))
 			    (target-mask
 			      (bits (get-component target 'collision-mask)))
 			    (target-radius
-			      (radius (get-component target 'bounding-circle))))
-			(when (and
+			      (get-component target :bounding-circle)))
+			(when (and target-pos bullet-pos
 			       (not (= 0
 				       (logand bullet-mask target-mask)))
 			       (circle-overlap bullet-pos bullet-radius

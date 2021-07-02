@@ -63,3 +63,11 @@
                        :fill-paint fill-paint
                        :stroke-paint stroke-paint
                        :thickness thikness)))
+
+(defclass image-drawing-parameters ()
+  ((image-id :initarg  :image-id
+	     :accessor image-id)))
+
+(defmethod render (position (dp image-drawing-parameters))
+  (with-slots (image-id) dp
+    (gamekit:draw-image position image-id)))

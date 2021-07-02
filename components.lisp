@@ -23,6 +23,11 @@
                   :accessor linear-speed)
    ))
 
+(defun make-linear-velocity (direction speed)
+  (make-instance 'linear-velocity
+		 :dir direction
+		 :linear-speed speed))
+
 (defmethod step-velocity ((v linear-velocity) dt)
   (gamekit:mult (dir v) (* (linear-speed v) dt)))
 
@@ -70,11 +75,6 @@
 	       :initform *base-circle*
 	       :accessor parameters)))
 
-(defclass bounding-circle ()
-  ((radius :initarg  :radius
-	   :initform 5.0
-	   :accessor radius)))
-
 (defun vec-length (v)
   (let ((vx (x v))
 	(vy (y v)))
@@ -82,16 +82,6 @@
 
 (defun circle-overlap (a-pos a-radius b-pos b-radius)
   (<= (vec-length (subt b-pos a-pos)) (+ a-radius b-radius)))
-
-(defclass damage ()
-  ((amount :initarg  :amount
-	   :initform 1
-	   :accessor amount)))
-
-(defclass health-points ()
-  ((amount :initarg  :amount
-	   :initform 1
-	   :accessor amount)))
 
 (defclass collision-mask ()
   ((bits :initarg  :bits
@@ -126,7 +116,7 @@
 		 :initform nil
 		 :accessor repeat)))
 
-(defun make-linear-path (nodes &key (relative-pos nil) (repeat nil))
+(defun make-linear-path (nodes &key (relative-pos nil) (repeat nil) (start-time 0.0))
   (make-instance 'linear-path
 		 :path-nodes nodes
 		 :relative-pos (or relative-pos (vec2 0 0))
@@ -199,26 +189,21 @@
 				:fill-paint *yellow*
 				:radius 10.0)))
 
-(defparameter *bullet-damage* (make-instance 'damage :amount 10))
+(defparameter *bullet-damage* 10)
 (defparameter *bullet-collision-mask* (make-instance 'collision-mask
 						     :bits #b0001))
-(defparameter *bullet-bounding-circle* (make-instance 'bounding-circle
-						      :radius 10.0))
 (defun spawn-bullet (x y dir speed &optional
 				     (drawable *bullet-drawable-component*)
 				     (damage *bullet-damage*)
 				     (collision-mask *bullet-collision-mask*)
-				     (bounding-circle *bullet-bounding-circle*))
-  (let ((e (spawn-entity))
-        (v (make-instance 'linear-velocity :dir dir
-                                           :linear-speed speed))
-        (p (vec2 x y)))
-    (attach-component e p :position)
-    (attach-component e v)
+				     (bounding-circle 10.0))
+  (let ((e (spawn-entity)))
+    (attach-component e (vec2 x y) :position)
+    (attach-component e (make-linear-velocity dir speed))
     (attach-component e *screen-boundaries*)
     (attach-component e drawable)
-    (attach-component e bounding-circle)
-    (attach-component e damage)
+    (attach-component e bounding-circle :bounding-circle)
+    (attach-component e damage :damage)
     (attach-component e collision-mask)))
 
 (defclass enemy-behavior ()
@@ -237,12 +222,10 @@
 				:stroke-paint *black*
 				:radius 5.0)))
 
-(defparameter *enemy-bullet-damage* (make-instance 'damage :amount 1))
-(defparameter *enemy-bullet-collision-mask* (make-instance 'collision-mask
-							   :bits #b0010))
-(defparameter *enemy-bullet-bounding-circle*
-  (make-instance 'bounding-circle
-		 :radius 5.0))
+(defparameter *enemy-bullet-damage* 1)
+(defparameter *enemy-bullet-collision-mask*
+  (make-instance 'collision-mask :bits #b0010))
+(defparameter *enemy-bullet-bounding-circle* 5.0)
 
 (defun update-enemy-behavior (enemy behavior dt)
   (let ((timer (shoting-timer behavior)))
