@@ -12,4 +12,5 @@
 	       (:file "entity")
 	       (:file "drawables")
 	       (:file "components")
+	       (:file "systems")
                (:file "sciuter")))
