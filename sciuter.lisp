@@ -33,6 +33,7 @@
                                (:s . :down)
                                (:z . :fire)
                                (:y . :fire)
+			       (:p . :pause)
 			       (:q . :quit)))
 
 (defvar *action-bag* nil)
@@ -56,8 +57,7 @@
 (defparameter *enemy-drawable-component-image*
   (make-instance 'drawable
 		 :parameters
-		 (make-instance 'image-drawing-parameters
-				:image-id :boss-image)))
+		 (make-image-drawing-parameters	:boss-image)))
 
 (defparameter *enemy-collision-mask* (make-instance 'collision-mask
 						    :bits #b0001))
@@ -215,16 +215,28 @@
 
 (defparameter *fixed-dt* (/ 1.0 60.0)) ;; ~60FPS
 
+(let ((paused nil))
+  (defun pause ()
+    (setf paused t))
+  (defun unpause ()
+    (setf paused nil))
+  (defun paused? () paused)
+  (defun toggle-pause ()
+    (setf paused (not (paused?)))))
+
 (defmethod gamekit:act ((this the-game))
-  (update-timers *fixed-dt*)
-  (update-player-direction)
-  (update-positions *fixed-dt*)
-  (update-entities-with-path *fixed-dt*)
-  (player-shot)
-  (remove-out-of-boundaries)
-  (resolve-collisions)
-  (when (action-active? :quit)
-    (stop)))
+  (when (not (paused?))
+    (update-timers *fixed-dt*)
+    (update-player-direction)
+    (update-positions *fixed-dt*)
+    (update-entities-with-path *fixed-dt*)
+    (player-shot)
+    (remove-out-of-boundaries)
+    (resolve-collisions)
+    (when (action-active? :pause)
+      (toggle-pause))
+    (when (action-active? :quit)
+      (stop))))
 
 (defun run ()
   (gamekit:start 'the-game)
