@@ -66,8 +66,24 @@
 
 (defclass image-drawing-parameters ()
   ((image-id :initarg  :image-id
-	     :accessor image-id)))
+	     :accessor image-id)
+   (origin   :initarg  :origin
+	     :initform (vec2 0.0 0.0)
+	     :accessor origin)
+   (width    :initarg  :width
+	     :accessor width)
+   (height   :initarg  :height
+	     :accessor height)))
+
+(defun make-image-drawing-parameters
+    (image-id &key (origin (vec2 0.0 0.0)) width height)
+  (make-instance 'image-drawing-parameters
+		 :image-id image-id
+		 :origin   origin
+		 :width    (or width (gamekit:image-width image-id))
+		 :height   (or height (gamekit:image-height image-id))))
 
 (defmethod render (position (dp image-drawing-parameters))
-  (with-slots (image-id) dp
-    (gamekit:draw-image position image-id)))
+  (with-slots (image-id origin width height) dp
+    (gamekit:draw-image position image-id
+			:origin origin)))
