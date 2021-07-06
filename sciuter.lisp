@@ -54,7 +54,7 @@
 				:fill-paint *green*
 				:stroke-paint *yellow*)))
 
-(defparameter *enemy-drawable-component-image*
+(defun enemy-drawable-component-image ()
   (make-instance 'drawable
 		 :parameters
 		 (make-image-drawing-parameters	:boss-image)))
@@ -150,7 +150,8 @@
   (spawn-enemy  500 600 :entity-id :enemy) ;; this one has an explicit id to help debugging
   (spawn-enemy  200 100
 		:path-nodes *enemy-path-nodes-other*
-		:drawable *enemy-drawable-component-image*))
+		:drawable (enemy-drawable-component-image))
+  )
 
 ;; (attach-component :enemy *enemy-drawable-component-image*)
 
@@ -168,10 +169,6 @@
     (draw-text score-str
 	     (vec2 51 51)
 	     :fill-color *red*)))
-
-(defmethod gamekit:draw ((this the-game))
-  (draw-entities)
-  (draw-score))
 
 (defun calculate-new-position (position velocity dt)
   (add position (step-velocity velocity dt)))
@@ -218,11 +215,19 @@
 (let ((paused nil))
   (defun pause ()
     (setf paused t))
+
   (defun unpause ()
     (setf paused nil))
+
   (defun paused? () paused)
+
   (defun toggle-pause ()
     (setf paused (not (paused?)))))
+
+(defmethod gamekit:draw ((this the-game))
+  (draw-entities)
+  (draw-score)
+  (draw-debug))
 
 (defmethod gamekit:act ((this the-game))
   (when (not (paused?))

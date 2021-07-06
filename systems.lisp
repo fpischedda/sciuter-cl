@@ -53,3 +53,15 @@
   (loop for entity in (entities-with-component 'linear-path)
 	do (let ((lp (get-component entity 'linear-path)))
 	     (attach-component entity (update-path lp dt) :position))))
+
+(defun draw-debug ()
+  "iterate over entities with drawable and position components
+   and render them to the screen."
+  (loop for entity in (entities-with-component :bounding-circle)
+        do (let ((position (get-component entity :position))
+		 (radius (get-component entity :bounding-circle)))
+	     (gamekit:draw-circle position
+                         radius
+                         :fill-paint *red*
+                         :stroke-paint *black*
+                         :thickness 2.0))))
