@@ -8,6 +8,7 @@
   :serial t
   :depends-on (trivial-gamekit)
   :components ((:file "package")
+	       (:file "input")
 	       (:file "color")
 	       (:file "entity")
 	       (:file "drawables")

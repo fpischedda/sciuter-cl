@@ -8,6 +8,9 @@
 		 (dp (parameters (get-component entity 'drawable))))
 	     (render position dp))))
 
+(defun calculate-new-position (position velocity dt)
+  (add position (step-velocity velocity dt)))
+
 (defun update-positions (dt)
   "iterate over entities with linear-velicity component and update their
    position component accordingly to the provided delta time dt."

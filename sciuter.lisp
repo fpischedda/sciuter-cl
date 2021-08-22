@@ -23,29 +23,6 @@
                  (:viewport-height *height*)
                  (:viewport-title "CL-Sciuter"))
 
-(defvar *key-action-binding* '((:left . :left)
-                               (:right . :right)
-                               (:up . :up)
-                               (:down . :down)
-                               (:a . :left)
-                               (:d . :right)
-                               (:w . :up)
-                               (:s . :down)
-                               (:z . :fire)
-                               (:y . :fire)
-			       (:p . :pause)
-			       (:q . :quit)))
-
-(defvar *action-bag* nil)
-
-(defun bind-key-action (key action)
-  (gamekit:bind-button key :pressed
-                       (lambda ()
-                         (push action *action-bag*)))
-  (gamekit:bind-button key :released
-                       (lambda ()
-                         (alexandria:deletef *action-bag* action))))
-
 (defparameter *enemy-drawable-component-circle*
   (make-instance 'drawable
 		 :parameters
@@ -143,7 +120,7 @@
     score))
 
 (defun reset-game ()
-  (setf *action-bag* nil)
+  (reset-input)
   (drain-unused-entities)
   (reset-score)
   (spawn-player 400 400)
@@ -156,9 +133,7 @@
 ;; (attach-component :enemy *enemy-drawable-component-image*)
 
 (defmethod gamekit:post-initialize ((app the-game))
-  (loop for binding in *key-action-binding*
-        do (destructuring-bind (key . action) binding
-                               (bind-key-action key action)))
+  (init-key-bindings)
   (reset-game))
 
 (defun draw-score ()
@@ -169,14 +144,6 @@
     (draw-text score-str
 	     (vec2 51 51)
 	     :fill-color *red*)))
-
-(defun calculate-new-position (position velocity dt)
-  (add position (step-velocity velocity dt)))
-
-(defun action-active? (action)
-  "takes an action symbol (for example :fire) and returns truty if the
-   the action is active."
-  (member action *action-bag*))
 
 (defun get-new-control-direction ()
   "Calculate new player direction based on user input"
@@ -227,7 +194,8 @@
 (defmethod gamekit:draw ((this the-game))
   (draw-entities)
   (draw-score)
-  (draw-debug))
+  ;; (draw-debug)
+  )
 
 (defmethod gamekit:act ((this the-game))
   (when (not (paused?))
